@@ -20,13 +20,13 @@ from runners.support.utils import (
 LOGGER = logging.getLogger(__name__)
 
 
-class AcmeAgent(DemoAgent):
+class BuyerAgent(DemoAgent):
     def __init__(self, http_port: int, admin_port: int, **kwargs):
         super().__init__(
-            "Acme Agent",
+            "Buyer Agent",
             http_port,
             admin_port,
-            prefix="Acme",
+            prefix="Buyer",
             extra_args=["--auto-accept-invites", "--auto-accept-requests"],
             **kwargs,
         )
@@ -99,7 +99,7 @@ async def main(start_port: int, show_timing: bool = False):
 
     try:
         log_status("#1 Provision an agent and wallet, get back configuration details")
-        agent = AcmeAgent(
+        agent = BuyerAgent(
             start_port, start_port + 1, genesis_data=genesis, timing=show_timing
         )
         await agent.listen_webhooks(start_port + 2)
@@ -135,7 +135,7 @@ async def main(start_port: int, show_timing: bool = False):
         with log_timer("Generate invitation duration:"):
             # Generate an invitation
             log_status(
-                "#5 Create a connection to alice and print out the invite details"
+                "#5 Create a connection to seller and print out the invite details"
             )
             connection = await agent.admin_POST("/connections/create-invitation")
 
@@ -161,7 +161,7 @@ async def main(start_port: int, show_timing: bool = False):
                 # TODO credential offers
 
             elif option == "2":
-                log_status("#20 Request proof of degree from alice")
+                log_status("#20 Request proof of degree from seller")
                 # TODO presentation requests
 
             elif option == "3":
@@ -194,7 +194,7 @@ async def main(start_port: int, show_timing: bool = False):
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Runs an Acme demo agent.")
+    parser = argparse.ArgumentParser(description="Runs an Buyer demo agent.")
     parser.add_argument(
         "-p",
         "--port",

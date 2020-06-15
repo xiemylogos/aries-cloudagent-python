@@ -80,7 +80,7 @@ do
     continue
   ;;
   --bg)
-    if [[ "${AGENT}" == "alice" ]] || [[ "${AGENT}" == "faber" ]] || [[ "${AGENT}" == "acme" ]]; then
+    if [[ "${AGENT}" == "seller" ]] || [[ "${AGENT}" == "market" ]] || [[ "${AGENT}" == "acme" ]]; then
       DOCKER_OPTS="-d"
       echo -e "\nRunning in ${AGENT} in the background. Note that you cannot use the command line console in this mode."
       echo To see the logs use: \"docker logs ${AGENT}\".
@@ -99,7 +99,7 @@ do
 Usage:
    ./demo_run <agent> [OPTIONS]
 
-   - <agent> is one of alice, faber, acme, performance.
+   - <agent> is one of seller, market, acme, performance.
    - Options:
       --events - display on the terminal the webhook events from the ACA-Py agent.
       --timing - at the end of the run, display timing; relevant to the "performance" agent.
@@ -117,12 +117,12 @@ EOF
   ARGS="${ARGS:+$ARGS }$i"
 done
 
-if [ "$AGENT" = "faber" ]; then
-  AGENT_MODULE="faber"
+if [ "$AGENT" = "market" ]; then
+  AGENT_MODULE="market"
   AGENT_PORT=8020
   AGENT_PORT_RANGE=8020-8027
-elif [ "$AGENT" = "alice" ]; then
-  AGENT_MODULE="alice"
+elif [ "$AGENT" = "seller" ]; then
+  AGENT_MODULE="seller"
   AGENT_PORT=8030
   AGENT_PORT_RANGE=8030-8037
 elif [ "$AGENT" = "acme" ]; then
@@ -134,12 +134,12 @@ elif [ "$AGENT" = "performance" ]; then
   AGENT_PORT=8030
   AGENT_PORT_RANGE=8030-8038
 else
-  echo "Please specify which agent you want to run. Choose from 'faber', 'alice', 'acme', or 'performance'."
+  echo "Please specify which agent you want to run. Choose from 'market', 'seller', 'acme', or 'performance'."
   exit 1
 fi
 
 echo "Preparing agent image..."
-docker build -q -t faber-alice-demo -f ../docker/Dockerfile.demo .. || exit 1
+docker build -q -t market-seller-demo -f ../docker/Dockerfile.demo .. || exit 1
 
 if [ ! -z "$DOCKERHOST" ]; then
   # provided via APPLICATION_URL environment variable
@@ -233,4 +233,4 @@ $DOCKER run --name $AGENT --rm -it ${DOCKER_OPTS} \
   -p 0.0.0.0:$AGENT_PORT_RANGE:$AGENT_PORT_RANGE \
   -v "/$(pwd)/../logs:/home/indy/logs" \
   $DOCKER_ENV \
-  faber-alice-demo $AGENT_MODULE --port $AGENT_PORT $ARGS
+  market-seller-demo $AGENT_MODULE --port $AGENT_PORT $ARGS

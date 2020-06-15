@@ -147,24 +147,24 @@ class BaseAgent(DemoAgent):
                 self.log(f"Task raised exception: {str(exc)}")
 
 
-class AliceAgent(BaseAgent):
+class SellerAgent(BaseAgent):
     def __init__(self, port: int, **kwargs):
-        super().__init__("Alice", port, seed=None, **kwargs)
+        super().__init__("Seller", port, seed=None, **kwargs)
         self.extra_args = [
             "--auto-respond-credential-offer",
             "--auto-store-credential",
             "--monitor-ping",
         ]
-        self.timing_log = "logs/alice_perf.log"
+        self.timing_log = "logs/seller_perf.log"
 
     async def set_tag_policy(self, cred_def_id, taggables):
         req_body = {"taggables": taggables}
         await self.admin_POST(f"/wallet/tag-policy/{cred_def_id}", req_body)
 
 
-class FaberAgent(BaseAgent):
+class MarketAgent(BaseAgent):
     def __init__(self, port: int, **kwargs):
-        super().__init__("Faber", port, **kwargs)
+        super().__init__("Market", port, **kwargs)
         self.schema_id = None
         self.credential_definition_id = None
         self.revocation_registry_id = None
@@ -254,61 +254,61 @@ async def main(
         print("Error retrieving ledger genesis transactions")
         sys.exit(1)
 
-    alice = None
-    faber = None
-    alice_router = None
+    seller = None
+    market = None
+    seller_router = None
     run_timer = log_timer("Total runtime:")
     run_timer.start()
 
     try:
-        alice = AliceAgent(start_port, genesis_data=genesis, timing=show_timing)
-        await alice.listen_webhooks(start_port + 2)
+        seller = SellerAgent(start_port, genesis_data=genesis, timing=show_timing)
+        await seller.listen_webhooks(start_port + 2)
 
-        faber = FaberAgent(start_port + 3, genesis_data=genesis, timing=show_timing)
-        await faber.listen_webhooks(start_port + 5)
-        await faber.register_did()
+        market = MarketAgent(start_port + 3, genesis_data=genesis, timing=show_timing)
+        await market.listen_webhooks(start_port + 5)
+        await market.register_did()
 
         if routing:
-            alice_router = RoutingAgent(
+            seller_router = RoutingAgent(
                 start_port + 6, genesis_data=genesis, timing=show_timing
             )
-            await alice_router.listen_webhooks(start_port + 8)
-            await alice_router.register_did()
+            await seller_router.listen_webhooks(start_port + 8)
+            await seller_router.register_did()
 
         with log_timer("Startup duration:"):
-            if alice_router:
-                await alice_router.start_process()
-            await alice.start_process()
-            await faber.start_process()
+            if seller_router:
+                await seller_router.start_process()
+            await seller.start_process()
+            await market.start_process()
 
         if not ping_only:
             with log_timer("Publish duration:"):
-                await faber.publish_defs(revoc)
-                # await alice.set_tag_policy(faber.credential_definition_id, ["name"])
+                await market.publish_defs(revoc)
+                # await seller.set_tag_policy(market.credential_definition_id, ["name"])
 
         with log_timer("Connect duration:"):
             if routing:
-                router_invite = await alice_router.get_invite()
-                alice_router_conn_id = await alice.receive_invite(router_invite)
-                await asyncio.wait_for(alice.detect_connection(), 30)
+                router_invite = await seller_router.get_invite()
+                seller_router_conn_id = await seller.receive_invite(router_invite)
+                await asyncio.wait_for(seller.detect_connection(), 30)
 
-            invite = await faber.get_invite()
+            invite = await market.get_invite()
 
             if routing:
-                conn_id = await alice.receive_invite(invite, auto_accept=False)
-                await alice.establish_inbound(conn_id, alice_router_conn_id)
-                await alice.accept_invite(conn_id)
-                await asyncio.wait_for(alice.detect_connection(), 30)
+                conn_id = await seller.receive_invite(invite, auto_accept=False)
+                await seller.establish_inbound(conn_id, seller_router_conn_id)
+                await seller.accept_invite(conn_id)
+                await asyncio.wait_for(seller.detect_connection(), 30)
             else:
-                await alice.receive_invite(invite)
+                await seller.receive_invite(invite)
 
-            await asyncio.wait_for(faber.detect_connection(), 30)
+            await asyncio.wait_for(market.detect_connection(), 30)
 
         if show_timing:
-            await alice.reset_timing()
-            await faber.reset_timing()
+            await seller.reset_timing()
+            await market.reset_timing()
             if routing:
-                await alice_router.reset_timing()
+                await seller_router.reset_timing()
 
         batch_size = 100
 
@@ -316,19 +316,17 @@ async def main(
 
         def done_send(fut: asyncio.Task):
             semaphore.release()
-            faber.check_task_exception(fut)
+            market.check_task_exception(fut)
 
         async def send_credential(index: int):
             await semaphore.acquire()
             comment = f"issue test credential {index}"
             attributes = {
-                "name": "Alice Smith",
-                "date": "2018-05-28",
-                "degree": "Maths",
-                "age": "24",
+                "data":"ont_did",
+                "data_info":"sell some data",
             }
             asyncio.ensure_future(
-                faber.send_credential(attributes, comment, not revoc)
+                market.send_credential(attributes, comment, not revoc)
             ).add_done_callback(done_send)
 
         async def check_received_creds(agent, issue_count, pb):
@@ -352,7 +350,7 @@ async def main(
 
         async def send_ping(index: int):
             await semaphore.acquire()
-            asyncio.ensure_future(faber.send_ping(str(index))).add_done_callback(
+            asyncio.ensure_future(market.send_ping(str(index))).add_done_callback(
                 done_send
             )
 
@@ -376,13 +374,13 @@ async def main(
                     break
 
         if ping_only:
-            recv_timer = faber.log_timer(f"Completed {issue_count} ping exchanges in")
-            batch_timer = faber.log_timer(f"Started {batch_size} ping exchanges in")
+            recv_timer = market.log_timer(f"Completed {issue_count} ping exchanges in")
+            batch_timer = market.log_timer(f"Started {batch_size} ping exchanges in")
         else:
-            recv_timer = faber.log_timer(
+            recv_timer = market.log_timer(
                 f"Completed {issue_count} credential exchanges in"
             )
-            batch_timer = faber.log_timer(
+            batch_timer = market.log_timer(
                 f"Started {batch_size} credential exchanges in"
             )
         recv_timer.start()
@@ -405,14 +403,14 @@ async def main(
                     completed = f"Done starting {issue_count} credential exchanges in"
 
                 issue_task = asyncio.ensure_future(
-                    check_received(faber, issue_count, issue_pg)
+                    check_received(market, issue_count, issue_pg)
                 )
-                issue_task.add_done_callback(faber.check_task_exception)
+                issue_task.add_done_callback(market.check_task_exception)
                 receive_task = asyncio.ensure_future(
-                    check_received(alice, issue_count, receive_pg)
+                    check_received(seller, issue_count, receive_pg)
                 )
-                receive_task.add_done_callback(alice.check_task_exception)
-                with faber.log_timer(completed):
+                receive_task.add_done_callback(seller.check_task_exception)
+                with market.log_timer(completed):
                     for idx in range(0, issue_count):
                         await send(idx + 1)
                         if not (idx + 1) % batch_size and idx < issue_count - 1:
@@ -429,57 +427,57 @@ async def main(
         avg = recv_timer.duration / issue_count
         item_short = "ping" if ping_only else "cred"
         item_long = "ping exchange" if ping_only else "credential"
-        faber.log(f"Average time per {item_long}: {avg:.2f}s ({1/avg:.2f}/s)")
+        market.log(f"Average time per {item_long}: {avg:.2f}s ({1/avg:.2f}/s)")
 
-        if alice.postgres:
-            await alice.collect_postgres_stats(f"{issue_count} {item_short}s")
-            for line in alice.format_postgres_stats():
-                alice.log(line)
-        if faber.postgres:
-            await faber.collect_postgres_stats(f"{issue_count} {item_short}s")
-            for line in faber.format_postgres_stats():
-                faber.log(line)
+        if seller.postgres:
+            await seller.collect_postgres_stats(f"{issue_count} {item_short}s")
+            for line in seller.format_postgres_stats():
+                seller.log(line)
+        if market.postgres:
+            await market.collect_postgres_stats(f"{issue_count} {item_short}s")
+            for line in market.format_postgres_stats():
+                market.log(line)
 
-        if revoc and faber.revocations:
-            (rev_reg_id, cred_rev_id) = next(iter(faber.revocations))
+        if revoc and market.revocations:
+            (rev_reg_id, cred_rev_id) = next(iter(market.revocations))
             print(
                 "Revoking and publishing cred rev id {cred_rev_id} "
                 "from rev reg id {rev_reg_id}"
             )
 
         if show_timing:
-            timing = await alice.fetch_timing()
+            timing = await seller.fetch_timing()
             if timing:
-                for line in alice.format_timing(timing):
-                    alice.log(line)
+                for line in seller.format_timing(timing):
+                    sellerj.log(line)
 
-            timing = await faber.fetch_timing()
+            timing = await market.fetch_timing()
             if timing:
-                for line in faber.format_timing(timing):
-                    faber.log(line)
+                for line in market.format_timing(timing):
+                    market.log(line)
             if routing:
-                timing = await alice_router.fetch_timing()
+                timing = await seller_router.fetch_timing()
                 if timing:
-                    for line in alice_router.format_timing(timing):
-                        alice_router.log(line)
+                    for line in seller_router.format_timing(timing):
+                        seller_router.log(line)
 
     finally:
         terminated = True
         try:
-            if alice:
-                await alice.terminate()
+            if seller:
+                await seller.terminate()
         except Exception:
             LOGGER.exception("Error terminating agent:")
             terminated = False
         try:
-            if faber:
-                await faber.terminate()
+            if market:
+                await market.terminate()
         except Exception:
             LOGGER.exception("Error terminating agent:")
             terminated = False
         try:
-            if alice_router:
-                await alice_router.terminate()
+            if seller_router:
+                await seller_router.terminate()
         except Exception:
             LOGGER.exception("Error terminating agent:")
             terminated = False

@@ -24,15 +24,15 @@ from runners.support.utils import (
 LOGGER = logging.getLogger(__name__)
 
 
-class AliceAgent(DemoAgent):
+class SellerAgent(DemoAgent):
     def __init__(
         self, http_port: int, admin_port: int, no_auto: bool = False, **kwargs
     ):
         super().__init__(
-            "Alice.Agent",
+            "Seller.Agent",
             http_port,
             admin_port,
-            prefix="Alice",
+            prefix="Seller",
             extra_args=[]
             if no_auto
             else [
@@ -223,7 +223,7 @@ async def main(start_port: int, no_auto: bool = False, show_timing: bool = False
 
     try:
         log_status("#7 Provision an agent and wallet, get back configuration details")
-        agent = AliceAgent(
+        agent = SellerAgent(
             start_port,
             start_port + 1,
             genesis_data=genesis,
@@ -284,7 +284,7 @@ async def main(start_port: int, no_auto: bool = False, show_timing: bool = False
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Runs an Alice demo agent.")
+    parser = argparse.ArgumentParser(description="Runs an Seller demo agent.")
     parser.add_argument("--no-auto", action="store_true", help="Disable auto issuance")
     parser.add_argument(
         "-p",
@@ -314,7 +314,7 @@ if __name__ == "__main__":
             import pydevd_pycharm
 
             print(
-                f"Alice remote debugging to {PYDEVD_PYCHARM_HOST}:{PYDEVD_PYCHARM_CONTROLLER_PORT}"
+                f"Seller remote debugging to {PYDEVD_PYCHARM_HOST}:{PYDEVD_PYCHARM_CONTROLLER_PORT}"
             )
             pydevd_pycharm.settrace(
                 host=PYDEVD_PYCHARM_HOST,

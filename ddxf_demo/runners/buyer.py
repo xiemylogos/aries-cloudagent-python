@@ -101,7 +101,7 @@ class BuyerAgent(DemoAgent):
                 pres_req["name"] == "Proof of Education"
             )
             if is_proof_of_education:
-                log_status("#28.1 Received proof of education, check claims")
+                log_status("#28.1 Received proof of seller data, check claims")
                 for (referent, attr_spec) in pres_req["requested_attributes"].items():
                     self.log(
                         f"{attr_spec['name']}: "

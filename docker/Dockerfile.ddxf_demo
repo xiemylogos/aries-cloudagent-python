@@ -1,0 +1,35 @@
+FROM bcgovimages/von-image:py36-1.14-1
+
+ENV ENABLE_PTVSD 0
+ENV ENABLE_PYDEVD_PYCHARM 0
+ENV PYDEVD_PYCHARM_HOST "host.docker.internal"
+
+USER root
+ADD https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 ./jq
+RUN chmod +x ./jq
+USER $user
+
+# Add and install Indy Agent code
+ADD requirements*.txt ./
+
+RUN pip3 install --no-cache-dir -r requirements.txt -r requirements.dev.txt
+
+ADD aries_cloudagent ./aries_cloudagent
+ADD bin ./bin
+ADD README.md ./
+ADD scripts ./scripts
+ADD setup.py ./
+
+RUN pip3 install --no-cache-dir -e .
+
+RUN mkdir ddxf_demo logs && chown -R indy:indy ddxf_demo logs && chmod -R ug+rw ddxf_demo logs
+
+# Add and install ddxf_demo code
+ADD ddxf_demo/requirements.txt ./ddxf_demo/requirements.txt
+RUN pip3 install --no-cache-dir -r ddxf_demo/requirements.txt
+
+ADD ddxf_demo ./ddxf_demo
+COPY ddxf_demo/ngrok-wait.sh ngrok-wait.sh
+RUN chmod +x ./ngrok-wait.sh
+
+ENTRYPOINT ["./ngrok-wait.sh"]

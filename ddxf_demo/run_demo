@@ -80,7 +80,7 @@ do
     continue
   ;;
   --bg)
-    if [[ "${AGENT}" == "seller" ]] || [[ "${AGENT}" == "market" ]] || [[ "${AGENT}" == "acme" ]]; then
+    if [[ "${AGENT}" == "seller" ]] || [[ "${AGENT}" == "market" ]] || [[ "${AGENT}" == "buyer" ]]; then
       DOCKER_OPTS="-d"
       echo -e "\nRunning in ${AGENT} in the background. Note that you cannot use the command line console in this mode."
       echo To see the logs use: \"docker logs ${AGENT}\".
@@ -88,7 +88,7 @@ do
       echo To stop the agent, use: \"docker stop ${AGENT}\". The docker environment will
       echo -e "be removed on stop.\n\n"
     else
-      echo The "bg" option \(for running docker in detached mode\) is only for agents Alice, Faber and Acme.
+      echo The "bg" option \(for running docker in detached mode\) is only for agents Seller, Market and Buyer.
       echo Ignoring...
     fi
     continue
@@ -125,8 +125,8 @@ elif [ "$AGENT" = "seller" ]; then
   AGENT_MODULE="seller"
   AGENT_PORT=8030
   AGENT_PORT_RANGE=8030-8037
-elif [ "$AGENT" = "acme" ]; then
-  AGENT_MODULE="acme"
+elif [ "$AGENT" = "buyer" ]; then
+  AGENT_MODULE="buyer"
   AGENT_PORT=8040
   AGENT_PORT_RANGE=8040-8047
 elif [ "$AGENT" = "performance" ]; then
@@ -134,12 +134,12 @@ elif [ "$AGENT" = "performance" ]; then
   AGENT_PORT=8030
   AGENT_PORT_RANGE=8030-8038
 else
-  echo "Please specify which agent you want to run. Choose from 'market', 'seller', 'acme', or 'performance'."
+  echo "Please specify which agent you want to run. Choose from 'market', 'seller', 'buyer', or 'performance'."
   exit 1
 fi
 
 echo "Preparing agent image..."
-docker build -q -t market-seller-demo -f ../docker/Dockerfile.demo .. || exit 1
+docker build -q -t market-seller-demo -f ../docker/Dockerfile.ddxf_demo .. || exit 1
 
 if [ ! -z "$DOCKERHOST" ]; then
   # provided via APPLICATION_URL environment variable
